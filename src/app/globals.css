@@ -1,26 +1,106 @@
 @import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import "@radix-ui/themes/styles.css";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Background colors */
+  --color-background: #fdfbf7;
+  --color-card: #ffffff;
+  --color-card-secondary: #fefbf6;
+  --color-menu-bg: #fffbf5;
+  --color-menu-active-bg: #fff3e3;
+  --color-menu-active-fg: #c18542;
+  --color-primary-bg-100: #fffbf5;
+  --color-primary-bg-200: #f8f0e3;
+  --color-primary-bg-300: #e9dcca;
+  --color-primary-bg-400: #fff0da;
+  --color-primary-bg-500: #6f5f48;
+
+  /* Brand colors */
+  --color-primary: #f9d194;
+  --color-primary-active: #f7d7a9;
+  --color-button-primary-bg: #f9d194;
+  --color-button-primary-bg-active: #f7d7a9;
+  --color-button-foreground: #5d3a1a;
+  --color-button-border: #d8b689;
+  --color-button-sec-bg: #ffffff;
+  --color-button-sec-bg-active: #f7f1e8;
+
+  /* Text colors */
+  --color-text-primary: #0d0d0d;
+  --color-foreground-second: #333333;
+  --color-foreground-third: #5d3a1a;
+  --color-foreground-primary: #d7973d;
+  --color-text-secondary: #5d5d5d;
+  --color-muted-foreground: #979797;
+  --color-menu-fg: #333333;
+
+  /* Accent colors */
+  --color-accent: #fff5e8;
+  --color-accent-foreground: #d7973d;
+  --color-accent-title: #6b440d;
+  --color-accent-title-bg: #f8daaf;
+
+  /* Border colors */
+  --color-border: #f3ede5;
+  --color-border-darker: #d3d3d3;
+  --color-border-primary: rgba(230, 176, 88, 0.5);
+  --color-border-primary-200: rgba(230, 176, 88, 0.2);
+  --color-border-primary-300: rgba(230, 176, 88, 0.3);
+  --color-border-primary-light: #e3d6c2;
+  --color-gray-btn-border: #d1d4dd;
+
+  /* Font families */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif-heading: "Noto Serif SC", Georgia, "Times New Roman", serif;
+
+  /* Font sizes */
+  --text-tip-small: 12px;
+  --text-body-small: 14px;
+  --text-body: 16px;
+  --text-body-medium: 18px;
+  --text-h5: 20px;
+  --text-h4: 24px;
+  --text-h3: 24px;
+  --text-h2: 28px;
+  --text-h1: 35px;
+  --text-hero: 60px;
+
+  /* Screen breakpoints */
+  --breakpoint-xs: 520px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1640px;
+  --breakpoint-3xl: 1920px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground-second);
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .animate-spin360 {
+    animation: spin360 1s linear infinite;
+  }
+  @keyframes spin360 {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .font-serif-heading {
+    font-family: "Noto Serif SC", Georgia, "Times New Roman", serif;
+  }
 }
