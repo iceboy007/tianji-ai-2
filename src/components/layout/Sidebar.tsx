@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useSession, signIn, signOut } from "next-auth/react";
 import {
   Sparkles,
   LayoutGrid,
@@ -27,7 +28,31 @@ const menuItems = [
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { data: session, status } = useSession();
+  const [profile, setProfile] = useState<{
+    name: string;
+    email: string;
+    quotaRemaining: number;
+    memberType: string;
+    sessionCount: number;
+  } | null>(null);
+
+  const isLoggedIn = status === "authenticated" && !!session?.user;
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetch("/api/user/profile")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setProfile(data.data);
+          }
+        })
+        .catch(() => {});
+    } else {
+      setProfile(null);
+    }
+  }, [isLoggedIn]);
 
   if (collapsed) return null;
 
@@ -94,7 +119,6 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Promotional Area */}
       <div className="px-4 py-2 space-y-2">
         <button className="w-full rounded-lg border border-border-primary-light bg-card px-3 py-2 text-center text-body-small text-foreground-third transition-colors hover:bg-primary-bg-100">
-          {/* Original: /images/sidebar/master-blessing-icon.png */}
           🎁 分享领取大礼包
         </button>
         <button className="w-full rounded-lg border border-border-primary-light bg-card px-3 py-2 text-center text-body-small text-foreground-third transition-colors hover:bg-primary-bg-100">
@@ -127,7 +151,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               登录以同步您的档案与聊天记录
             </p>
             <button
-              onClick={() => setIsLoggedIn(true)}
+              onClick={() => signIn()}
               className="mt-2 h-10 w-full rounded-full border border-primary px-4 text-body-small font-medium text-button-foreground transition-colors hover:bg-accent"
             >
               登录/注册
@@ -137,37 +161,45 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           /* Logged In - User Info */
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              {/* Placeholder for zodiac image - original: /images/chinese-zodiac/{zodiac}@2x.png */}
               <div className="h-8 w-8 rounded-full border border-border bg-primary-bg-200 flex items-center justify-center text-tip-small">
                 🐉
               </div>
               <div>
                 <div className="text-body-small font-medium text-menu-fg">
-                  张三
+                  {profile?.name || session?.user?.name || session?.user?.email?.split("@")[0] || "用户"}
                 </div>
                 <div className="text-tip-small text-muted-foreground">
-                  男 · 1990-01-01
+                  {session?.user?.email?.slice(0, 20)}
                 </div>
               </div>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
-                {/* Placeholder for coins icon - original: /images/coins.png */}
                 <span className="text-body-small">⭐</span>
                 <span className="text-body-small font-medium text-menu-fg">
-                  100
+                  {profile?.quotaRemaining ?? 0}
                 </span>
               </div>
               <span className="rounded-full bg-primary-bg-200 px-2 py-0.5 text-tip-small text-foreground-primary">
-                免费用户
+                {profile?.memberType === "premium" || profile?.memberType === "vip"
+                  ? "会员"
+                  : "免费用户"}
               </span>
             </div>
-            <button
-              onClick={() => setIsLoggedIn(false)}
-              className="text-tip-small text-muted-foreground hover:underline"
-            >
-              退出登录
-            </button>
+            <div className="flex gap-2">
+              <Link
+                href="/account"
+                className="text-tip-small text-muted-foreground hover:underline"
+              >
+                账户管理
+              </Link>
+              <button
+                onClick={() => signOut()}
+                className="text-tip-small text-muted-foreground hover:underline"
+              >
+                退出登录
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import BaziGrid from "@/components/bazi/BaziGrid";
 
@@ -8,17 +8,120 @@ interface DashboardContentProps {
   reportId: string;
 }
 
+interface ChartData {
+  name: string;
+  gender: string;
+  chartData: any;
+  createdAt: string;
+}
+
+interface DayunData {
+  dayun_list: { stem: string; branch: string; age: string }[];
+  start_age: number;
+}
+
 const tabs = [
-  "咨询AI",
   "基本信息",
   "大运流年",
-  "年度报告",
-  "个性报告",
-  "深度报告",
+  "咨询AI",
 ];
+
+const zodiacMap: Record<string, string> = {
+  子: "🐭", 丑: "🐮", 寅: "🐯", 卯: "🐰",
+  辰: "🐲", 巳: "🐍", 午: "🐴", 未: "🐑",
+  申: "🐵", 酉: "🐔", 戌: "🐶", 亥: "🐷",
+};
+
+const nayinMap: Record<string, string> = {
+  甲子: "海中金", 乙丑: "海中金", 丙寅: "炉中火", 丁卯: "炉中火",
+  戊辰: "大林木", 己巳: "大林木", 庚午: "路旁土", 辛未: "路旁土",
+  壬申: "剑锋金", 癸酉: "剑锋金", 甲戌: "山头火", 乙亥: "山头火",
+  丙子: "涧下水", 丁丑: "涧下水", 戊寅: "城头土", 己卯: "城头土",
+  庚辰: "白蜡金", 辛巳: "白蜡金", 壬午: "杨柳木", 癸未: "杨柳木",
+  甲申: "泉中水", 乙酉: "泉中水", 丙戌: "屋上土", 丁亥: "屋上土",
+  戊子: "霹雳火", 己丑: "霹雳火", 庚寅: "松柏木", 辛卯: "松柏木",
+  壬辰: "长流水", 癸巳: "长流水", 甲午: "沙中金", 乙未: "沙中金",
+  丙申: "山下火", 丁酉: "山下火", 戊戌: "平地木", 己亥: "平地木",
+  庚子: "壁上土", 辛丑: "壁上土", 壬寅: "金箔金", 癸卯: "金箔金",
+  甲辰: "覆灯火", 乙巳: "覆灯火", 丙午: "天河水", 丁未: "天河水",
+  戊申: "大驿土", 己酉: "大驿土", 庚戌: "钗钏金", 辛亥: "钗钏金",
+  壬子: "桑柘木", 癸丑: "桑柘木", 甲寅: "大溪水", 乙卯: "大溪水",
+  丙辰: "沙中土", 丁巳: "沙中土", 戊午: "天上火", 己未: "天上火",
+  庚申: "石榴木", 辛酉: "石榴木", 壬戌: "大海水", 癸亥: "大海水",
+};
 
 export default function DashboardContent({ reportId }: DashboardContentProps) {
   const [activeTab, setActiveTab] = useState("基本信息");
+  const [chart, setChart] = useState<ChartData | null>(null);
+  const [dayun, setDayun] = useState<DayunData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch(`/api/user/charts`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data) {
+          const found = data.data.find((c: any) => c.id === reportId);
+          if (found) {
+            setChart(found);
+            const baziInfo = {
+              year: found.chartData?.year?.stem + found.chartData?.year?.branch || "",
+              month: found.chartData?.month?.stem + found.chartData?.month?.branch || "",
+              day: found.chartData?.day?.stem + found.chartData?.day?.branch || "",
+              hour: found.chartData?.hour?.stem + found.chartData?.hour?.branch || "",
+            };
+            fetch("/api/bazi/dayun", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(found.chartData),
+            })
+              .then((res) => res.json())
+              .then((d) => {
+                if (d.success) setDayun(d.data);
+              })
+              .catch(() => {});
+          }
+        }
+      })
+      .catch(() => setError("加载失败"))
+      .finally(() => setLoading(false));
+  }, [reportId]);
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-border border-t-foreground-primary" />
+          加载中...
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !chart) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <p className="text-body text-muted-foreground">{error || "未找到档案"}</p>
+          <Link
+            href="/reports"
+            className="mt-4 inline-block text-body text-foreground-primary hover:underline"
+          >
+            返回档案列表
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const { chartData } = chart;
+  const dayMaster = chartData?.day_master || (chartData?.day?.stem + chartData?.day?.branch || "");
+  const genderLabel = chart.gender === "male" ? "男" : "女";
+  const yearPillar = (chartData?.year?.stem || "") + (chartData?.year?.branch || "");
+  const nayin = nayinMap[yearPillar] || "";
+  const yearZodiac = chartData?.year?.branch || "";
+  const zodiacEmoji = zodiacMap[yearZodiac] || "🐉";
 
   return (
     <div className="flex h-full flex-col bg-primary-bg-100">
@@ -36,23 +139,22 @@ export default function DashboardContent({ reportId }: DashboardContentProps) {
       {/* Profile Summary Card */}
       <div className="border-b border-border bg-card px-4 py-3">
         <div className="flex items-center gap-4">
-          {/* Placeholder zodiac - original: /images/chinese-zodiac/{zodiac}@2x.png */}
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-bg-200 text-2xl">
-            🐲
+            {zodiacEmoji}
           </div>
           <div>
             <h2 className="font-serif-heading text-h5 font-bold text-foreground-third">
-              张三
+              {chart.name}
             </h2>
             <p className="text-body-small text-text-secondary">
-              男 · 1990-01-01 · 海中金命
+              {genderLabel} · {dayMaster} · {nayin || "命"}
             </p>
           </div>
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="sticky top-0 border-b border-border bg-card/75 backdrop-blur">
+      <div className="sticky top-0 border-b border-border bg-card/75 backdrop-blur z-10">
         <div className="flex overflow-x-auto hide-scrollbar">
           {tabs.map((tab) => (
             <button
@@ -60,9 +162,7 @@ export default function DashboardContent({ reportId }: DashboardContentProps) {
               onClick={() => setActiveTab(tab)}
               className={`relative shrink-0 px-4 py-3 font-serif-heading text-body font-medium transition-colors ${
                 activeTab === tab
-                  ? tab === "年度报告"
-                    ? "bg-gradient-to-r from-pink-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent border-b-2 border-foreground-primary"
-                    : "text-foreground-primary border-b-2 border-foreground-primary"
+                  ? "text-foreground-primary border-b-2 border-foreground-primary"
                   : "text-foreground-second hover:text-foreground-primary"
               }`}
             >
@@ -78,73 +178,91 @@ export default function DashboardContent({ reportId }: DashboardContentProps) {
           <div className="space-y-6">
             <BaziGrid />
 
-            {/* Five Elements Analysis */}
-            <div className="rounded-xl border border-border bg-card p-4">
-              <h3 className="font-serif-heading text-h5 font-bold text-foreground-third">
-                五行强弱
-              </h3>
-              <div className="mt-3 space-y-2">
-                {[
-                  { element: "金", value: 60, color: "bg-yellow-400" },
-                  { element: "木", value: 30, color: "bg-green-400" },
-                  { element: "水", value: 45, color: "bg-blue-400" },
-                  { element: "火", value: 70, color: "bg-red-400" },
-                  { element: "土", value: 55, color: "bg-amber-400" },
-                ].map((item) => (
-                  <div key={item.element} className="flex items-center gap-3">
-                    <span className="w-8 text-body-small font-medium text-foreground-second">
-                      {item.element}
-                    </span>
-                    <div className="flex-1 h-3 rounded-full bg-primary-bg-200">
-                      <div
-                        className={`h-full rounded-full ${item.color}`}
-                        style={{ width: `${item.value}%` }}
-                      />
+            {/* Five Elements */}
+            {chartData?.five_elements && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h3 className="font-serif-heading text-h5 font-bold text-foreground-third">
+                  五行强弱
+                </h3>
+                <div className="mt-3 space-y-2">
+                  {[
+                    { element: "金", value: chartData.five_elements["金"] || 0, color: "bg-yellow-400" },
+                    { element: "木", value: chartData.five_elements["木"] || 0, color: "bg-green-400" },
+                    { element: "水", value: chartData.five_elements["水"] || 0, color: "bg-blue-400" },
+                    { element: "火", value: chartData.five_elements["火"] || 0, color: "bg-red-400" },
+                    { element: "土", value: chartData.five_elements["土"] || 0, color: "bg-amber-400" },
+                  ].map((item) => (
+                    <div key={item.element} className="flex items-center gap-3">
+                      <span className="w-8 text-body-small font-medium text-foreground-second">
+                        {item.element}
+                      </span>
+                      <div className="flex-1 h-3 rounded-full bg-primary-bg-200">
+                        <div
+                          className={`h-full rounded-full ${item.color}`}
+                          style={{ width: `${Math.min(item.value, 100)}%` }}
+                        />
+                      </div>
+                      <span className="w-10 text-right text-tip-small text-muted-foreground">
+                        {item.value}%
+                      </span>
                     </div>
-                    <span className="w-8 text-right text-tip-small text-muted-foreground">
-                      {item.value}%
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Shen Sha */}
-            <div className="rounded-xl border border-border bg-card p-4">
-              <h3 className="font-serif-heading text-h5 font-bold text-foreground-third">
-                神煞
-              </h3>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {["天乙贵人", "文昌贵人", "驿马", "桃花"].map((shensha) => (
-                  <span
-                    key={shensha}
-                    className="rounded-md bg-primary-bg-200 px-3 py-1 text-body-small text-foreground-third"
-                  >
-                    {shensha}
-                  </span>
-                ))}
+            {chartData?.shensha && chartData.shensha.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h3 className="font-serif-heading text-h5 font-bold text-foreground-third">
+                  神煞
+                </h3>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {chartData.shensha.map((s: string) => (
+                    <span
+                      key={s}
+                      className="rounded-md bg-primary-bg-200 px-3 py-1 text-body-small text-foreground-third"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Pattern */}
+            {/* Day Master */}
             <div className="rounded-xl border border-border bg-card p-4">
               <h3 className="font-serif-heading text-h5 font-bold text-foreground-third">
-                格局
+                日主
               </h3>
               <p className="mt-2 text-body text-foreground-second">
-                正官格
+                {dayMaster}
               </p>
             </div>
+
+            {/* Nayin */}
+            {nayin && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h3 className="font-serif-heading text-h5 font-bold text-foreground-third">
+                  纳音
+                </h3>
+                <p className="mt-2 text-body text-foreground-second">
+                  {nayin}
+                </p>
+              </div>
+            )}
 
             {/* Da Yun Start Age */}
-            <div className="rounded-xl border border-border bg-card p-4">
-              <h3 className="font-serif-heading text-h5 font-bold text-foreground-third">
-                大运起运
-              </h3>
-              <p className="mt-2 text-body text-foreground-second">
-                起运年龄：8岁
-              </p>
-            </div>
+            {dayun?.start_age != null && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h3 className="font-serif-heading text-h5 font-bold text-foreground-third">
+                  大运起运
+                </h3>
+                <p className="mt-2 text-body text-foreground-second">
+                  起运年龄：{dayun.start_age}岁
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -154,16 +272,21 @@ export default function DashboardContent({ reportId }: DashboardContentProps) {
               <h3 className="font-serif-heading text-h5 font-bold text-foreground-third">
                 大运
               </h3>
-              <div className="mt-3 flex gap-3 overflow-x-auto">
-                {["8-17岁 甲戌", "18-27岁 癸酉", "28-37岁 壬申", "38-47岁 辛未", "48-57岁 庚午"].map(
-                  (dayun) => (
-                    <div
-                      key={dayun}
-                      className="shrink-0 rounded-lg border border-border bg-primary-bg-100 px-4 py-2 text-center text-body-small font-serif-heading text-foreground-third"
-                    >
-                      {dayun}
-                    </div>
-                  )
+              <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
+                {dayun?.dayun_list && dayun.dayun_list.length > 0 ? (
+                  dayun.dayun_list.map((d, i) => {
+                    const startAge = parseInt(d.age);
+                    return (
+                      <div
+                        key={i}
+                        className="shrink-0 rounded-lg border border-border bg-primary-bg-100 px-4 py-2 text-center text-body-small font-serif-heading text-foreground-third"
+                      >
+                        {d.age}岁 {d.stem}{d.branch}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-body-small text-muted-foreground">暂无大运数据</p>
                 )}
               </div>
             </div>
@@ -186,53 +309,6 @@ export default function DashboardContent({ reportId }: DashboardContentProps) {
                       </div>
                     );
                   })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {(activeTab === "个性报告" || activeTab === "深度报告" || activeTab === "年度报告") && (
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-border bg-card p-8 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-bg-200">
-                <span className="text-2xl">🔒</span>
-              </div>
-              <h3 className="mt-4 font-serif-heading text-h5 font-bold text-foreground-third">
-                解锁{activeTab}
-              </h3>
-              <p className="mt-2 text-body-small text-text-secondary">
-                使用参天石或订阅会员即可解锁深度分析报告
-              </p>
-              <div className="mt-4 flex items-center justify-center gap-2">
-                <span className="text-h4 font-bold text-foreground-primary">5</span>
-                <span className="text-body-small text-text-secondary">参天石</span>
-              </div>
-              <button className="mt-4 rounded-full bg-button-primary-bg px-8 py-2.5 text-body font-medium text-button-foreground transition-colors hover:bg-button-primary-bg-active">
-                立即解锁
-              </button>
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-6">
-              <div className="prose prose-sm max-w-none">
-                <h2 className="font-serif-heading text-h5 font-bold text-foreground-third">
-                  个性分析报告
-                </h2>
-                <p className="mt-2 text-body text-foreground-second">
-                  您的命盘显示，日主为戊土，生于午月，火旺土相。戊土为城墙之土，厚重诚实...
-                </p>
-                <h3 className="mt-4 font-serif-heading text-h4 font-bold text-foreground-third">
-                  性格特点
-                </h3>
-                <ul className="mt-2 space-y-1">
-                  <li className="text-body text-foreground-second">稳重踏实，责任心强</li>
-                  <li className="text-body text-foreground-second">待人真诚，值得信赖</li>
-                  <li className="text-body text-foreground-second">善于规划，执行力强</li>
-                </ul>
-                <div className="mt-4 rounded-lg bg-primary-bg-100 p-4">
-                  <p className="font-serif-heading text-h5 font-bold text-foreground-primary">
-                    综合评分：85分
-                  </p>
                 </div>
               </div>
             </div>
